@@ -82,10 +82,10 @@ const CONFIG = {
     QQ_LOGIN: { x: 0.69, y: 0.84 },
     // 登录页协议勾选框（图2 左下小方框）
     AGREEMENT_CHECKBOX: { x: 0.03, y: 0.92 },
-    // 登号器账号输入框（横屏通用估计值，按实测微调）
-    LOGIN_HELPER_ACCOUNT_INPUT: { x: 0.50, y: 0.56 },
-    // 登号器 OP/登录按钮（横屏通用估计值，按实测微调）
-    LOGIN_HELPER_OP_BTN: { x: 0.50, y: 0.76 },
+    // 登号器 token 输入区域（你最新截图为竖屏页）
+    LOGIN_HELPER_ACCOUNT_INPUT: { x: 0.50, y: 0.49 },
+    // 登号器「输入OP数据点我授权」按钮
+    LOGIN_HELPER_OP_BTN: { x: 0.50, y: 0.84 },
     // 大厅页左侧“好友”（图3）
     FRIEND_BTN: { x: 0.04, y: 0.79 },
     // 好友页左侧第二项“广结好友”（图4）
@@ -115,10 +115,10 @@ const CONFIG = {
     AGREEMENT_CHECKBOX: /(同意|已阅读|用户协议|隐私政策|我已经详细阅读并同意)/,
 
     // Step 5/6: 登号器账号输入提示
-    LOGIN_HELPER_ACCOUNT_HINT: /(账号|QQ号|请输入账号)/,
+    LOGIN_HELPER_ACCOUNT_HINT: /(账号|QQ号|请输入账号|token|TOKEN)/,
 
     // Step 6: 登号器 op/登录按钮
-    LOGIN_HELPER_OP_BTN: /(OP|登录|确定|确认)/,
+    LOGIN_HELPER_OP_BTN: /(输入OP数据点我授权|点我授权|OP数据|授权|OP|登录|确定|确认)/,
 
     // Step 7: 大厅锚点
     LOBBY_MARK: /(好友|商城|排位|活动|新手签到|新手任务|召唤)/,
@@ -376,6 +376,9 @@ function waitLoginHelperReady() {
   if (findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 8000)) {
     return true;
   }
+  if (waitByRegex(CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN, 3000)) {
+    return true;
+  }
   // 兜底：无法识别输入框时，若未进入大厅，则先允许继续执行后续输入兜底逻辑。
   if (!waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 1000)) {
     log("未识别到登号器输入框，按兜底路径继续。");
@@ -542,7 +545,7 @@ function step05WaitLoginHelper() {
 
 // Step 6: 填写账号 + 点击 op 按钮
 function step06InputAccountAndSubmit(account) {
-  log("Step6 填写账号并提交");
+  log("Step6 填写账号/token并点击授权");
   const accountInput = findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 10000);
   if (accountInput) {
     if (!setInputText(accountInput, account)) throw new Error("账号填写失败。");
@@ -555,11 +558,12 @@ function step06InputAccountAndSubmit(account) {
   if (!tapWithFallback(
     CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN,
     CONFIG.COORD_FALLBACK.LOGIN_HELPER_OP_BTN,
-    "OP按钮",
+    "输入OP数据点我授权",
     8000
   )) {
-    throw new Error("未找到 op/登录按钮。");
+    throw new Error("未找到「输入OP数据点我授权」按钮。");
   }
+  sleep(6000);
 }
 
 // Step 7: 进入游戏大厅

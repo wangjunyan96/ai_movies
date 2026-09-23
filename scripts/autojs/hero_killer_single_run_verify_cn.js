@@ -12,7 +12,8 @@
 
 const CONFIG = {
   // ===== 手动填写这两个值 =====
-  ACCOUNT: "qq_test_001",
+  // 登录凭证：这里填“账号 token”
+  LOGIN_TOKEN: "qq_test_001",
   REUNION_CODE: "74061c8f23",
 
   // 游戏 App 名称
@@ -31,8 +32,10 @@ const CONFIG = {
   COORD_FALLBACK: {
     QQ_LOGIN: { x: 0.69, y: 0.84 },
     AGREEMENT_CHECKBOX: { x: 0.03, y: 0.92 },
-    LOGIN_HELPER_ACCOUNT_INPUT: { x: 0.50, y: 0.56 },
-    LOGIN_HELPER_OP_BTN: { x: 0.50, y: 0.76 },
+    // 上号器 token 输入区域（你提供截图为竖屏页）
+    LOGIN_HELPER_TOKEN_INPUT: { x: 0.50, y: 0.49 },
+    // 上号器「输入OP数据点我授权」按钮
+    LOGIN_HELPER_OP_AUTH_BTN: { x: 0.50, y: 0.84 },
     FRIEND_BTN: { x: 0.04, y: 0.79 },
     LEFT_SECOND_BTN: { x: 0.05, y: 0.36 },
     REUNION_INPUT: { x: 0.50, y: 0.56 },
@@ -46,8 +49,8 @@ const CONFIG = {
     LOGIN_PAGE: /(QQ登录|微信登录|游客登录|快速登录|二维码登录)/,
     QQ_LOGIN_BTN: /(QQ登录)/,
     AGREEMENT_CHECKBOX: /(同意|已阅读|用户协议|隐私政策|我已经详细阅读并同意)/,
-    LOGIN_HELPER_ACCOUNT_HINT: /(账号|QQ号|请输入账号)/,
-    LOGIN_HELPER_OP_BTN: /(OP|登录|确定|确认)/,
+    LOGIN_HELPER_ACCOUNT_HINT: /(账号|QQ号|请输入账号|token|TOKEN)/,
+    LOGIN_HELPER_OP_BTN: /(输入OP数据点我授权|点我授权|OP数据|授权|OP|登录|确定|确认)/,
     LOBBY_MARK: /(好友|商城|排位|活动|新手签到|新手任务|召唤)/,
     FRIEND_BTN: /(好友)/,
     LEFT_SECOND_BTN_TEXT: /(广结好友|重逢|召回|回归|老友|换一批)/,
@@ -225,6 +228,9 @@ function waitLoginHelperReady() {
   if (findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 8000)) {
     return true;
   }
+  if (waitByRegex(CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN, 3000)) {
+    return true;
+  }
   if (!waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 1000)) {
     log("未识别到登号器输入框，按兜底路径继续。");
     return true;
@@ -321,23 +327,24 @@ function step06InputAccountAndSubmit() {
     log("Step6 跳过：当前已在大厅，无需填写账号。");
     return;
   }
-  log("Step6 填账号并提交");
+  log("Step6 填写token并点击授权");
   const accountInput = findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 10000);
   if (accountInput) {
-    if (!setInputText(accountInput, CONFIG.ACCOUNT)) throw new Error("账号填写失败。");
+    if (!setInputText(accountInput, CONFIG.LOGIN_TOKEN)) throw new Error("token填写失败。");
   } else {
-    if (!setInputTextByPoint(CONFIG.COORD_FALLBACK.LOGIN_HELPER_ACCOUNT_INPUT, CONFIG.ACCOUNT, "账号输入")) {
-      throw new Error("未找到账号输入框，且坐标兜底输入失败。");
+    if (!setInputTextByPoint(CONFIG.COORD_FALLBACK.LOGIN_HELPER_TOKEN_INPUT, CONFIG.LOGIN_TOKEN, "token输入")) {
+      throw new Error("未找到token输入框，且坐标兜底输入失败。");
     }
   }
   if (!tapWithFallback(
     CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN,
-    CONFIG.COORD_FALLBACK.LOGIN_HELPER_OP_BTN,
-    "OP按钮",
+    CONFIG.COORD_FALLBACK.LOGIN_HELPER_OP_AUTH_BTN,
+    "输入OP数据点我授权",
     8000
   )) {
-    throw new Error("未找到op/登录按钮。");
+    throw new Error("未找到「输入OP数据点我授权」按钮。");
   }
+  sleep(6000);
 }
 
 // Step 7

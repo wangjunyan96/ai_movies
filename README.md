@@ -231,7 +231,7 @@ Use this file for one-shot validation without backend:
 `scripts/autojs/hero_killer_single_run_verify_cn.js`
 
 Edit before run:
-- `ACCOUNT`
+- `LOGIN_TOKEN` (account token for login-helper)
 - `REUNION_CODE`
 
 Behavior:
