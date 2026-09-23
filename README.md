@@ -180,6 +180,7 @@ Script file:
 
 ```text
 scripts/autojs/hero_killer_reunion_client.js
+scripts/autojs/hero_killer_reunion_client_v2_cn.js
 ```
 
 What it does:
@@ -192,3 +193,7 @@ Before running:
 1. update `CONFIG.SERVER_BASE` and `CONFIG.DEVICE_ID`
 2. set `CONFIG.API_KEY` if server auth is enabled
 3. adjust selector regex values in `CONFIG.SELECTORS` to your real game/login-helper UI
+
+V2 note:
+- `hero_killer_reunion_client_v2_cn.js` uses fully Chinese inline comments
+- the game flow is explicitly mapped to the 13 business steps
