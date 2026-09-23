@@ -112,6 +112,9 @@ const CONFIG = {
     AGREEMENT_CHECKBOX: { x: 81, y: 679 },
     QQ_LOGIN: { x: 846, y: 597 },
     FRIEND_BTN: { x: 56, y: 599 },
+    LEFT_SECOND_BTN: { x: 58, y: 258 },
+    REUNION_INPUT: { x: 639, y: 386 },
+    REUNION_CONFIRM: { x: 635, y: 536 },
     PROFILE_BTN: { x: 58, y: 35 },
     SWITCH_ACCOUNT_BTN: { x: 218, y: 486 },
     ACCEPT_INVITE: { x: 1044, y: 147 },
@@ -732,8 +735,9 @@ function step08OpenFriendPage() {
 // Step 9: 点击左侧第二个按钮
 function step09TapLeftSecondButton() {
   log("Step9 点击左侧第二个按钮");
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.LEFT_SECOND_BTN_TEXT,
+    CONFIG.ABS_COORD.LEFT_SECOND_BTN,
     CONFIG.COORD_FALLBACK.LEFT_SECOND_BTN,
     "左侧第二按钮",
     7000
@@ -756,11 +760,17 @@ function step10InputReunionCodeAndConfirm(reunionCode) {
   if (codeInput) {
     filled = setInputText(codeInput, reunionCode);
   } else {
-    filled = setInputTextByPoint(CONFIG.COORD_FALLBACK.REUNION_INPUT, reunionCode, "重逢码输入框");
+    filled = setInputTextBySmartPoint(
+      CONFIG.ABS_COORD.REUNION_INPUT,
+      CONFIG.COORD_FALLBACK.REUNION_INPUT,
+      reunionCode,
+      "重逢码输入框"
+    );
   }
   if (!filled) throw new Error("重逢码填写失败。");
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.REUNION_CONFIRM_BTN,
+    CONFIG.ABS_COORD.REUNION_CONFIRM,
     CONFIG.COORD_FALLBACK.REUNION_CONFIRM,
     "确认绑定",
     6000
