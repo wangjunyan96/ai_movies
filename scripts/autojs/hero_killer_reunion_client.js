@@ -16,6 +16,13 @@
  * - Some game pages are OpenGL and may require OCR/image matching fallback.
  */
 
+/**
+ * Runtime configuration.
+ *
+ * Tip:
+ * - First adjust SERVER_BASE / DEVICE_ID / API_KEY.
+ * - Then tune SELECTORS with your real UI text.
+ */
 const CONFIG = {
   SERVER_BASE: "http://127.0.0.1:8080/api/v1",
   API_KEY: "", // Optional. Set if server has API_KEY enabled.
@@ -43,16 +50,22 @@ const CONFIG = {
   }
 };
 
+// Wait for Accessibility Service, otherwise text/desc queries cannot work.
 auto.waitFor();
 console.show();
 log("Script started.");
 let screenshotEnabled = false;
 try {
+  // Request screenshot once so failure snapshots can be saved for debugging.
   screenshotEnabled = requestScreenCapture(false);
 } catch (e) {
+  // Screenshot permission is optional; flow can still continue without it.
   screenshotEnabled = false;
 }
 
+/**
+ * Build HTTP headers for all server requests.
+ */
 function headers() {
   const h = { "Content-Type": "application/json" };
   if (CONFIG.API_KEY && CONFIG.API_KEY.length > 0) {
@@ -61,6 +74,9 @@ function headers() {
   return h;
 }
 
+/**
+ * Parse JSON safely to avoid script crash on malformed response.
+ */
 function safeJsonParse(raw) {
   try {
     return JSON.parse(raw);
@@ -69,6 +85,9 @@ function safeJsonParse(raw) {
   }
 }
 
+/**
+ * POST JSON request helper.
+ */
 function httpPostJson(path, payload) {
   const url = CONFIG.SERVER_BASE + path;
   const res = http.postJson(url, payload, { headers: headers() });
@@ -83,6 +102,9 @@ function httpPostJson(path, payload) {
   };
 }
 
+/**
+ * GET request helper.
+ */
 function httpGet(path) {
   const url = CONFIG.SERVER_BASE + path;
   const res = http.get(url, { headers: headers() });
@@ -97,16 +119,19 @@ function httpGet(path) {
   };
 }
 
+// Unified short sleep; lets us tune pacing globally.
 function sleepShort(ms) {
   sleep(ms || CONFIG.PAGE_WAIT_MS);
 }
 
+// Click the center point of a UI node.
 function clickCenterOf(node) {
   if (!node) return false;
   const b = node.bounds();
   return click(b.centerX(), b.centerY());
 }
 
+// Prefer text selector first.
 function tapByTextRegex(regex, timeoutMs) {
   const n = textMatches(regex).findOne(timeoutMs || 1000);
   if (!n) return false;
@@ -115,6 +140,7 @@ function tapByTextRegex(regex, timeoutMs) {
   return ok;
 }
 
+// Fallback to content-desc selector.
 function tapByDescRegex(regex, timeoutMs) {
   const n = descMatches(regex).findOne(timeoutMs || 1000);
   if (!n) return false;
@@ -123,16 +149,19 @@ function tapByDescRegex(regex, timeoutMs) {
   return ok;
 }
 
+// Generic tap helper used by almost all workflow steps.
 function tapByRegex(regex, timeoutMs) {
   return tapByTextRegex(regex, timeoutMs) || tapByDescRegex(regex, timeoutMs);
 }
 
+// Wait until an anchor element of current page appears.
 function waitByRegex(regex, timeoutMs) {
   const t = timeoutMs || CONFIG.ACTION_TIMEOUT_MS;
   if (textMatches(regex).findOne(t)) return true;
   return !!descMatches(regex).findOne(300);
 }
 
+// Best-effort close of common startup/update popups.
 function closeCommonPopups(rounds) {
   const times = rounds || 6;
   for (let i = 0; i < times; i++) {
@@ -142,6 +171,11 @@ function closeCommonPopups(rounds) {
   }
 }
 
+/**
+ * Locate text input by:
+ * 1) Direct EditText lookup
+ * 2) Hint text + parent traversal lookup
+ */
 function findInputByHintRegex(regex, timeoutMs) {
   const deadline = new Date().getTime() + (timeoutMs || 6000);
   while (new Date().getTime() < deadline) {
@@ -158,6 +192,7 @@ function findInputByHintRegex(regex, timeoutMs) {
   return null;
 }
 
+// Robust text input: node.setText first, global setText as fallback.
 function setInputText(inputNode, value) {
   if (!inputNode) return false;
   inputNode.click();
@@ -177,10 +212,15 @@ function setInputText(inputNode, value) {
   }
 }
 
+/**
+ * Core business flow for one task.
+ * Throws Error on any required-step failure, and caller reports failed state.
+ */
 function runLoginAndReunionFlow(task) {
   const account = task.account;
   const reunionCode = task.reunionCode;
 
+  // Step 1: launch game and handle startup dialogs.
   log("Launching game...");
   launchApp(CONFIG.GAME_APP_NAME);
   sleep(8000);
@@ -190,6 +230,7 @@ function runLoginAndReunionFlow(task) {
     throw new Error("Login page not found.");
   }
 
+  // Step 2: enter QQ login and accept agreement if needed.
   log("Tap QQ login...");
   if (!tapByRegex(CONFIG.SELECTORS.QQ_LOGIN_BTN, 5000)) {
     throw new Error("QQ login button not found.");
@@ -197,6 +238,7 @@ function runLoginAndReunionFlow(task) {
 
   tapByRegex(CONFIG.SELECTORS.AGREEMENT_CHECKBOX, 3000);
 
+  // Step 3: in login helper, fill account and submit.
   log("Fill account in login helper...");
   sleep(3000);
   const accountInput = findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 10000);
@@ -211,11 +253,13 @@ function runLoginAndReunionFlow(task) {
     throw new Error("OP/login button not found.");
   }
 
+  // Step 4: wait for lobby.
   log("Waiting for game lobby...");
   if (!waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 25000)) {
     throw new Error("Game lobby not detected after login.");
   }
 
+  // Step 5: open friend page and enter reunion panel.
   log("Open friends page...");
   if (!tapByRegex(CONFIG.SELECTORS.FRIEND_BTN, 8000)) {
     throw new Error("Friend button not found.");
@@ -226,6 +270,7 @@ function runLoginAndReunionFlow(task) {
     throw new Error("Left second button for reunion not found.");
   }
 
+  // Step 6: fill reunion code and confirm.
   log("Input reunion code...");
   const codeInput = findInputByHintRegex(CONFIG.SELECTORS.REUNION_CODE_INPUT_HINT, 10000);
   if (!codeInput) {
@@ -239,6 +284,7 @@ function runLoginAndReunionFlow(task) {
     throw new Error("Reunion confirm button not found.");
   }
 
+  // Step 7: close retry popup if any, then return lobby.
   tapByRegex(CONFIG.SELECTORS.RETRY_POPUP_CLOSE, 3000);
   sleepShort(800);
 
@@ -248,6 +294,7 @@ function runLoginAndReunionFlow(task) {
   back();
   sleep(2000);
 
+  // Step 8: open profile and switch account for next loop.
   log("Open profile and switch account...");
   if (!tapByRegex(CONFIG.SELECTORS.PROFILE_BTN, 7000)) {
     throw new Error("Profile button not found.");
@@ -262,6 +309,10 @@ function runLoginAndReunionFlow(task) {
   }
 }
 
+/**
+ * Background heartbeat thread.
+ * Keeps lease alive while the task is running.
+ */
 function startHeartbeatLoop(taskId, runId, stopFlagRef) {
   return threads.start(function () {
     while (!stopFlagRef.stop) {
@@ -280,6 +331,7 @@ function startHeartbeatLoop(taskId, runId, stopFlagRef) {
   });
 }
 
+// Ask server for next account/reunion-code task.
 function claimTask() {
   const res = httpPostJson("/tasks/claim", { deviceId: CONFIG.DEVICE_ID });
   if (res.statusCode !== 200 || !res.json) {
@@ -288,6 +340,7 @@ function claimTask() {
   return res.json.task;
 }
 
+// Report final status for claimed task.
 function reportTask(taskId, runId, status, errorMsg) {
   const payload = {
     deviceId: CONFIG.DEVICE_ID,
@@ -299,6 +352,7 @@ function reportTask(taskId, runId, status, errorMsg) {
   log("report: " + res.bodyRaw);
 }
 
+// Save screenshot when task fails (for later selector tuning).
 function saveFailureScreenshot(taskId) {
   if (!screenshotEnabled) return;
   try {
@@ -312,6 +366,14 @@ function saveFailureScreenshot(taskId) {
   }
 }
 
+/**
+ * Main worker loop:
+ * - health check
+ * - claim task
+ * - execute flow
+ * - report result
+ * - repeat forever
+ */
 function mainLoop() {
   log("Check server health...");
   const health = httpGet("/health");
@@ -344,6 +406,7 @@ function mainLoop() {
       log("Task done.");
       toast("Task done: " + task.id);
     } catch (e) {
+      // Any thrown error means this task is considered failed.
       status = "failed";
       error = String(e);
       log("Task failed: " + error);
@@ -359,6 +422,7 @@ function mainLoop() {
     try {
       reportTask(task.id, task.runId, status, error);
     } catch (e) {
+      // Reporting failure should not crash the worker loop.
       log("report error: " + e);
     }
 
