@@ -46,7 +46,7 @@ const CONFIG = {
 
   // 页面文案锚点（结合你的截图调过）
   SELECTORS: {
-    LOGIN_PAGE: /(QQ登录|微信登录|游客登录|快速登录|二维码登录)/,
+    LOGIN_PAGE: /(QQ登录|微信登录|游客登录|快速登录|二维码登录|用户协议|隐私政策|我已经详细阅读并同意)/,
     QQ_LOGIN_BTN: /(QQ登录)/,
     AGREEMENT_CHECKBOX: /(同意|已阅读|用户协议|隐私政策|我已经详细阅读并同意)/,
     LOGIN_HELPER_ACCOUNT_HINT: /(账号|QQ号|请输入账号|token|TOKEN)/,

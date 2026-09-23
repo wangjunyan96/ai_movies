@@ -106,7 +106,7 @@ const CONFIG = {
    */
   SELECTORS: {
     // 登录页锚点（只要出现其一就视为在登录页）
-    LOGIN_PAGE: /(QQ登录|微信登录|游客登录|快速登录)/,
+    LOGIN_PAGE: /(QQ登录|微信登录|游客登录|快速登录|用户协议|隐私政策|我已经详细阅读并同意)/,
 
     // Step 4: QQ 登录按钮
     QQ_LOGIN_BTN: /(QQ登录)/,
