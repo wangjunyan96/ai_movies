@@ -522,33 +522,15 @@ function step08OpenFriendPage() {
 function step09TapLeftSecondButton() {
   log("Step9 点击左侧第二按钮");
   if (CONFIG.COORD_ONLY_MODE) {
-    // 坐标模式：左侧第二按钮做多点位尝试，降低“点到边缘没响应”的概率
-    const p = CONFIG.ABS_COORD.LEFT_SECOND_BTN;
-    const clickPlan = [
-      { x: p.x, y: p.y, tag: "左侧第二按钮-中心" },
-      { x: p.x + 18, y: p.y, tag: "左侧第二按钮-右偏" },
-      { x: p.x, y: p.y + 24, tag: "左侧第二按钮-下偏" }
-    ];
-
-    for (let i = 0; i < clickPlan.length; i++) {
-      tapByAbsolutePoint(clickPlan[i], clickPlan[i].tag);
-      sleep(700);
-      if (waitByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 800)) {
-        log("Step9 已检测到重逢弹窗，停止继续重试点击。");
-        return;
-      }
-    }
-
+    // 按你的要求：延迟3秒后点击一次准确坐标
+    sleep(3000);
+    tapByAbsolutePoint(CONFIG.ABS_COORD.LEFT_SECOND_BTN, "左侧第二按钮");
+    sleep(1200);
     // 若点击广结好友后没出弹窗，则补点「接受邀请」
-    if (!waitByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 1000)) {
-      log("Step9 未检测到重逢弹窗，尝试点击【接受邀请】（第1次）");
+    if (!waitByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 1500)) {
+      log("Step9 未检测到重逢弹窗，尝试点击【接受邀请】");
       tapByAbsolutePoint(CONFIG.ABS_COORD.ACCEPT_INVITE, "接受邀请");
       sleep(1500);
-      if (!waitByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 1000)) {
-        log("Step9 仍未检测到弹窗，再次点击【接受邀请】（第2次）");
-        tapByAbsolutePoint(CONFIG.ABS_COORD.ACCEPT_INVITE, "接受邀请-重试");
-        sleep(1500);
-      }
     }
     return;
   }
