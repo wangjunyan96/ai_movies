@@ -36,6 +36,21 @@ const CONFIG = {
   // 若服务端开启 API_KEY，这里填写同样的 key；未开启则留空
   API_KEY: "",
 
+  /**
+   * 本地离线测试模式（无后端时使用）
+   * true  = 不请求服务端，直接使用 LOCAL_TEST_TASKS
+   * false = 使用服务端 claim/report/heartbeat
+   */
+  LOCAL_TEST_MODE: false,
+
+  // 本地任务全部跑完后是否自动退出
+  LOCAL_TEST_EXIT_WHEN_DONE: true,
+
+  // 本地离线任务队列（账号与重逢码动态可改）
+  LOCAL_TEST_TASKS: [
+    { account: "qq_test_001", reunionCode: "74061c8f23" }
+  ],
+
   // 云手机唯一标识（用于服务端分配任务与上报）
   DEVICE_ID: "redfinger-01",
 
@@ -132,6 +147,11 @@ const CONFIG = {
     // Step 13: 返回登录页锚点
     BACK_TO_LOGIN_MARK: /(QQ登录|微信登录|游客登录|快速登录|二维码登录)/
   }
+};
+
+// 本地测试模式运行时状态
+const LOCAL_STATE = {
+  index: 0
 };
 
 /**
@@ -405,6 +425,10 @@ function startHeartbeatLoop(taskId, runId, stopRef) {
  * 向服务端领取任务（动态账号 + 重逢码）。
  */
 function claimTask() {
+  if (CONFIG.LOCAL_TEST_MODE) {
+    return claimLocalTask();
+  }
+
   const res = httpPostJson("/tasks/claim", { deviceId: CONFIG.DEVICE_ID });
   if (res.statusCode !== 200 || !res.json) {
     throw new Error("领取任务失败: " + res.bodyRaw);
@@ -413,9 +437,37 @@ function claimTask() {
 }
 
 /**
+ * 从本地离线队列领取任务（无后端调试用）。
+ */
+function claimLocalTask() {
+  if (!CONFIG.LOCAL_TEST_TASKS || LOCAL_STATE.index >= CONFIG.LOCAL_TEST_TASKS.length) {
+    return null;
+  }
+  const raw = CONFIG.LOCAL_TEST_TASKS[LOCAL_STATE.index];
+  LOCAL_STATE.index += 1;
+  return {
+    id: 900000 + LOCAL_STATE.index,
+    account: raw.account,
+    reunionCode: raw.reunionCode,
+    runId: "local-run-" + LOCAL_STATE.index
+  };
+}
+
+/**
  * 向服务端上报任务执行结果。
  */
 function reportTask(taskId, runId, status, errorMsg) {
+  if (CONFIG.LOCAL_TEST_MODE) {
+    const payload = {
+      deviceId: CONFIG.DEVICE_ID,
+      runId: runId,
+      status: status,
+      error: errorMsg || ""
+    };
+    log("本地模式上报(仅日志): taskId=" + taskId + " -> " + JSON.stringify(payload));
+    return;
+  }
+
   const payload = {
     deviceId: CONFIG.DEVICE_ID,
     runId: runId,
@@ -640,8 +692,12 @@ function runFlowForTask(task) {
  * - 循环
  */
 function mainLoop() {
-  const health = httpGet("/health");
-  log("服务健康检查: " + health.bodyRaw);
+  if (CONFIG.LOCAL_TEST_MODE) {
+    log("当前为本地离线测试模式：不连接后端服务。");
+  } else {
+    const health = httpGet("/health");
+    log("服务健康检查: " + health.bodyRaw);
+  }
 
   while (true) {
     let task = null;
@@ -654,6 +710,13 @@ function mainLoop() {
     }
 
     if (!task) {
+      if (CONFIG.LOCAL_TEST_MODE) {
+        log("本地离线任务已执行完毕。");
+        if (CONFIG.LOCAL_TEST_EXIT_WHEN_DONE) {
+          toast("离线测试完成，脚本退出");
+          exit();
+        }
+      }
       log("暂无任务，等待下次轮询...");
       sleep(CONFIG.POLL_INTERVAL_MS);
       continue;
@@ -662,7 +725,9 @@ function mainLoop() {
     log("已领取任务 id=" + task.id + " account=" + task.account);
 
     const stopRef = { stop: false };
-    const heartbeatThread = startHeartbeatLoop(task.id, task.runId, stopRef);
+    const heartbeatThread = CONFIG.LOCAL_TEST_MODE
+      ? { interrupt: function () {} }
+      : startHeartbeatLoop(task.id, task.runId, stopRef);
     let finalStatus = "done";
     let finalError = "";
 

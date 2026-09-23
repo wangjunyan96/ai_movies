@@ -197,3 +197,28 @@ Before running:
 V2 note:
 - `hero_killer_reunion_client_v2_cn.js` uses fully Chinese inline comments
 - the game flow is explicitly mapped to the 13 business steps
+
+### Test script without backend (offline mode)
+
+If backend is not ready yet, use offline mode in:
+`scripts/autojs/hero_killer_reunion_client_v2_cn.js`
+
+1) set:
+- `LOCAL_TEST_MODE: true`
+- `LOCAL_TEST_EXIT_WHEN_DONE: true` (optional, exit after all local tasks)
+
+2) edit local tasks:
+
+```js
+LOCAL_TEST_TASKS: [
+  { account: "qq_test_001", reunionCode: "74061c8f23" },
+  { account: "qq_test_002", reunionCode: "abc1234567" }
+]
+```
+
+3) run script in Auto.js with accessibility/screenshot permission.
+
+In offline mode:
+- no request to `/health`/`/claim`/`/heartbeat`/`/report`
+- tasks are pulled from `LOCAL_TEST_TASKS`
+- report output is printed to console log only
