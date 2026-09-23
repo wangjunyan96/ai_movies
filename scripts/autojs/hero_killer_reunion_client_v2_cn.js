@@ -42,6 +42,9 @@ const CONFIG = {
   // 游戏 App 名称（按你云手机实际名称修改）
   GAME_APP_NAME: "英雄杀",
 
+  // 手机桌面上的游戏图标文案兜底（launchApp 失败时用）
+  GAME_ICON_TEXT_FALLBACK: /(英雄杀|英雄sha)/,
+
   // 可选：登号器包名。若你知道包名，填上会更稳（例如 com.xxx.loginhelper）
   // 若留空，脚本会只靠页面元素判断是否进入登号器
   LOGIN_HELPER_PACKAGE: "",
@@ -58,6 +61,30 @@ const CONFIG = {
   // 常用短等待，用于点击后 UI 渲染
   PAGE_WAIT_MS: 1200,
 
+  // 点击兜底坐标（比例值：0~1，基于当前屏幕宽高）
+  COORD_FALLBACK: {
+    // 登录页中 QQ 登录按钮（图2）
+    QQ_LOGIN: { x: 0.69, y: 0.84 },
+    // 登录页协议勾选框（图2 左下小方框）
+    AGREEMENT_CHECKBOX: { x: 0.03, y: 0.92 },
+    // 登号器账号输入框（横屏通用估计值，按实测微调）
+    LOGIN_HELPER_ACCOUNT_INPUT: { x: 0.50, y: 0.56 },
+    // 登号器 OP/登录按钮（横屏通用估计值，按实测微调）
+    LOGIN_HELPER_OP_BTN: { x: 0.50, y: 0.76 },
+    // 大厅页左侧“好友”（图3）
+    FRIEND_BTN: { x: 0.04, y: 0.79 },
+    // 好友页左侧第二项“广结好友”（图4）
+    LEFT_SECOND_BTN: { x: 0.05, y: 0.36 },
+    // 重逢码弹窗输入区（图4 中部输入框）
+    REUNION_INPUT: { x: 0.50, y: 0.56 },
+    // 重逢码“确认绑定”按钮（图4）
+    REUNION_CONFIRM: { x: 0.50, y: 0.76 },
+    // 个人中心入口（大厅左上头像区，图3）
+    PROFILE_BTN: { x: 0.05, y: 0.07 },
+    // 切换账号按钮（图5）
+    SWITCH_ACCOUNT_BTN: { x: 0.18, y: 0.68 }
+  },
+
   /**
    * 选择器配置（最关键）
    * 建议先用 Auto.js 布局分析确认真实文案，再逐项替换。
@@ -70,7 +97,7 @@ const CONFIG = {
     QQ_LOGIN_BTN: /(QQ登录)/,
 
     // Step 4: 协议勾选（可选）
-    AGREEMENT_CHECKBOX: /(同意|已阅读|用户协议|隐私政策)/,
+    AGREEMENT_CHECKBOX: /(同意|已阅读|用户协议|隐私政策|我已经详细阅读并同意)/,
 
     // Step 5/6: 登号器账号输入提示
     LOGIN_HELPER_ACCOUNT_HINT: /(账号|QQ号|请输入账号)/,
@@ -79,31 +106,31 @@ const CONFIG = {
     LOGIN_HELPER_OP_BTN: /(OP|登录|确定|确认)/,
 
     // Step 7: 大厅锚点
-    LOBBY_MARK: /(好友|商城|排位|活动)/,
+    LOBBY_MARK: /(好友|商城|排位|活动|新手签到|新手任务|召唤)/,
 
     // Step 8: 左下角好友
     FRIEND_BTN: /(好友)/,
 
     // Step 9: 左侧第二个按钮（按你的页面文案改）
-    LEFT_SECOND_BTN_TEXT: /(重逢|召回|回归|老友)/,
+    LEFT_SECOND_BTN_TEXT: /(广结好友|重逢|召回|回归|老友|换一批)/,
 
     // Step 10: 重逢码输入框提示
     REUNION_CODE_INPUT_HINT: /(重逢码|邀请码|兑换码|请输入)/,
 
     // Step 10: 确定/提交
-    REUNION_CONFIRM_BTN: /(确定|提交|兑换|确认)/,
+    REUNION_CONFIRM_BTN: /(确认绑定|确定|提交|兑换|确认)/,
 
     // Step 11: 重试弹窗关闭
     RETRY_POPUP_CLOSE: /(关闭|取消|知道了|X)/,
 
     // Step 12: 个人中心入口
-    PROFILE_BTN: /(头像|个人中心|我的)/,
+    PROFILE_BTN: /(头像|个人中心|我的|个人信息)/,
 
     // Step 12: 切换账号按钮
-    SWITCH_ACCOUNT_BTN: /(切换账号|退出登录|注销)/,
+    SWITCH_ACCOUNT_BTN: /(切换账号|退出登录|注销|切换帐号)/,
 
     // Step 13: 返回登录页锚点
-    BACK_TO_LOGIN_MARK: /(QQ登录|微信登录|游客登录|快速登录)/
+    BACK_TO_LOGIN_MARK: /(QQ登录|微信登录|游客登录|快速登录|二维码登录)/
   }
 };
 
@@ -182,6 +209,21 @@ function clickCenter(node) {
 }
 
 /**
+ * 按屏幕比例点击坐标兜底（用于游戏自绘页面无法用 text/desc 时）。
+ */
+function tapByRatioPoint(point, tag) {
+  if (!point) return false;
+  const x = Math.floor(device.width * point.x);
+  const y = Math.floor(device.height * point.y);
+  const ok = click(x, y);
+  if (ok) {
+    log("坐标兜底点击[" + (tag || "unknown") + "] -> (" + x + "," + y + ")");
+    sleepShort();
+  }
+  return ok;
+}
+
+/**
  * 通过 text 正则点击。
  */
 function tapByTextRegex(regex, timeoutMs) {
@@ -208,6 +250,15 @@ function tapByDescRegex(regex, timeoutMs) {
  */
 function tapByRegex(regex, timeoutMs) {
   return tapByTextRegex(regex, timeoutMs) || tapByDescRegex(regex, timeoutMs);
+}
+
+/**
+ * 先走文案识别点击，失败后走坐标兜底。
+ */
+function tapWithFallback(regex, point, tag, timeoutMs) {
+  const ok = tapByRegex(regex, timeoutMs);
+  if (ok) return true;
+  return tapByRatioPoint(point, tag);
 }
 
 /**
@@ -274,6 +325,21 @@ function setInputText(inputNode, value) {
 }
 
 /**
+ * 兜底输入：先点击目标输入区域，再尝试全局 setText。
+ */
+function setInputTextByPoint(point, value, tag) {
+  if (!tapByRatioPoint(point, tag)) return false;
+  sleepShort(300);
+  try {
+    setText(value);
+    sleepShort(500);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * 可选：等待登号器被拉起。
  * - 若配置了 LOGIN_HELPER_PACKAGE，则优先等待包名切换；
  * - 无包名时，退化为等待账号输入框线索。
@@ -287,7 +353,15 @@ function waitLoginHelperReady() {
       return true;
     }
   }
-  return !!findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 8000);
+  if (findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 8000)) {
+    return true;
+  }
+  // 兜底：无法识别输入框时，若未进入大厅，则先允许继续执行后续输入兜底逻辑。
+  if (!waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 1000)) {
+    log("未识别到登号器输入框，按兜底路径继续。");
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -361,7 +435,15 @@ function reportTask(taskId, runId, status, errorMsg) {
 // Step 1: 打开游戏
 function step01LaunchGame() {
   log("Step1 打开游戏");
-  launchApp(CONFIG.GAME_APP_NAME);
+  let launched = launchApp(CONFIG.GAME_APP_NAME);
+  if (!launched) {
+    // 桌面图标兜底：例如“英雄sha”
+    log("launchApp 失败，尝试点击桌面图标兜底。");
+    launched = tapByRegex(CONFIG.GAME_ICON_TEXT_FALLBACK, 4000);
+  }
+  if (!launched) {
+    throw new Error("无法启动游戏（应用名与图标文案都未命中）。");
+  }
   sleep(8000);
   closeCommonPopups(8);
 }
@@ -377,7 +459,12 @@ function step02EnsureLoginPage() {
 // Step 3: 选择 QQ 登录
 function step03TapQqLogin() {
   log("Step3 点击 QQ 登录");
-  if (!tapByRegex(CONFIG.SELECTORS.QQ_LOGIN_BTN, 6000)) {
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.QQ_LOGIN_BTN,
+    CONFIG.COORD_FALLBACK.QQ_LOGIN,
+    "QQ登录",
+    6000
+  )) {
     throw new Error("未找到 QQ 登录按钮。");
   }
 }
@@ -385,7 +472,12 @@ function step03TapQqLogin() {
 // Step 4: 勾选协议（若出现）
 function step04AgreeProtocol() {
   log("Step4 勾选协议");
-  tapByRegex(CONFIG.SELECTORS.AGREEMENT_CHECKBOX, 3000);
+  tapWithFallback(
+    CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
+    CONFIG.COORD_FALLBACK.AGREEMENT_CHECKBOX,
+    "协议勾选",
+    3000
+  );
 }
 
 // Step 5: 自动拉起登号器
@@ -400,9 +492,20 @@ function step05WaitLoginHelper() {
 function step06InputAccountAndSubmit(account) {
   log("Step6 填写账号并提交");
   const accountInput = findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 10000);
-  if (!accountInput) throw new Error("未找到账号输入框。");
-  if (!setInputText(accountInput, account)) throw new Error("账号填写失败。");
-  if (!tapByRegex(CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN, 8000)) {
+  if (accountInput) {
+    if (!setInputText(accountInput, account)) throw new Error("账号填写失败。");
+  } else {
+    // 账号输入框识别失败时，尝试用账号输入区坐标兜底
+    if (!setInputTextByPoint(CONFIG.COORD_FALLBACK.LOGIN_HELPER_ACCOUNT_INPUT, account, "账号输入框兜底")) {
+      throw new Error("未找到账号输入框，且坐标兜底输入失败。");
+    }
+  }
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN,
+    CONFIG.COORD_FALLBACK.LOGIN_HELPER_OP_BTN,
+    "OP按钮",
+    8000
+  )) {
     throw new Error("未找到 op/登录按钮。");
   }
 }
@@ -418,7 +521,12 @@ function step07WaitLobby() {
 // Step 8: 点击左下角好友
 function step08OpenFriendPage() {
   log("Step8 打开好友页");
-  if (!tapByRegex(CONFIG.SELECTORS.FRIEND_BTN, 8000)) {
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.FRIEND_BTN,
+    CONFIG.COORD_FALLBACK.FRIEND_BTN,
+    "好友按钮",
+    8000
+  )) {
     throw new Error("未找到好友按钮。");
   }
   sleep(2200);
@@ -427,7 +535,12 @@ function step08OpenFriendPage() {
 // Step 9: 点击左侧第二个按钮
 function step09TapLeftSecondButton() {
   log("Step9 点击左侧第二个按钮");
-  if (!tapByRegex(CONFIG.SELECTORS.LEFT_SECOND_BTN_TEXT, 7000)) {
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.LEFT_SECOND_BTN_TEXT,
+    CONFIG.COORD_FALLBACK.LEFT_SECOND_BTN,
+    "左侧第二按钮",
+    7000
+  )) {
     throw new Error("未找到左侧第二个目标按钮。");
   }
 }
@@ -436,9 +549,19 @@ function step09TapLeftSecondButton() {
 function step10InputReunionCodeAndConfirm(reunionCode) {
   log("Step10 填重逢码并确认");
   const codeInput = findInputByHintRegex(CONFIG.SELECTORS.REUNION_CODE_INPUT_HINT, 10000);
-  if (!codeInput) throw new Error("未找到重逢码输入框。");
-  if (!setInputText(codeInput, reunionCode)) throw new Error("重逢码填写失败。");
-  if (!tapByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 6000)) {
+  let filled = false;
+  if (codeInput) {
+    filled = setInputText(codeInput, reunionCode);
+  } else {
+    filled = setInputTextByPoint(CONFIG.COORD_FALLBACK.REUNION_INPUT, reunionCode, "重逢码输入框");
+  }
+  if (!filled) throw new Error("重逢码填写失败。");
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.REUNION_CONFIRM_BTN,
+    CONFIG.COORD_FALLBACK.REUNION_CONFIRM,
+    "确认绑定",
+    6000
+  )) {
     throw new Error("未找到重逢码确认按钮。");
   }
 }
@@ -458,11 +581,21 @@ function step12SwitchAccountFromProfile() {
   back();
   sleep(1800);
 
-  if (!tapByRegex(CONFIG.SELECTORS.PROFILE_BTN, 7000)) {
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.PROFILE_BTN,
+    CONFIG.COORD_FALLBACK.PROFILE_BTN,
+    "个人中心",
+    7000
+  )) {
     throw new Error("未找到个人中心入口。");
   }
   sleep(2000);
-  if (!tapByRegex(CONFIG.SELECTORS.SWITCH_ACCOUNT_BTN, 7000)) {
+  if (!tapWithFallback(
+    CONFIG.SELECTORS.SWITCH_ACCOUNT_BTN,
+    CONFIG.COORD_FALLBACK.SWITCH_ACCOUNT_BTN,
+    "切换账号",
+    7000
+  )) {
     throw new Error("未找到切换账号按钮。");
   }
 }
