@@ -181,6 +181,7 @@ Script file:
 ```text
 scripts/autojs/hero_killer_reunion_client.js
 scripts/autojs/hero_killer_reunion_client_v2_cn.js
+scripts/autojs/hero_killer_single_run_verify_cn.js
 ```
 
 What it does:
@@ -222,3 +223,18 @@ In offline mode:
 - no request to `/health`/`/claim`/`/heartbeat`/`/report`
 - tasks are pulled from `LOCAL_TEST_TASKS`
 - report output is printed to console log only
+
+### Single account / single run verify script
+
+Use this file for one-shot validation without backend:
+
+`scripts/autojs/hero_killer_single_run_verify_cn.js`
+
+Edit before run:
+- `ACCOUNT`
+- `REUNION_CODE`
+
+Behavior:
+- execute the full 13-step flow once
+- auto exit after success/failure
+- save failure screenshot to `/sdcard/Download/hs_single_run_failed.png`
