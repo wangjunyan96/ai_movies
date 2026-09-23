@@ -173,3 +173,22 @@ Response:
 Endpoints under `/api/v1/admin/*` currently return HTTP `501` as placeholders.
 
 For now, update `data/tasks.csv` directly to input account + reunion code.
+
+## Auto.js cloud-phone client script
+
+Script file:
+
+```text
+scripts/autojs/hero_killer_reunion_client.js
+```
+
+What it does:
+- claims dynamic task data (`account`, `reunionCode`) from `/api/v1/tasks/claim`
+- runs login + reunion-code flow in game
+- sends heartbeat while running
+- reports `done` or `failed` to `/api/v1/tasks/{id}/report`
+
+Before running:
+1. update `CONFIG.SERVER_BASE` and `CONFIG.DEVICE_ID`
+2. set `CONFIG.API_KEY` if server auth is enabled
+3. adjust selector regex values in `CONFIG.SELECTORS` to your real game/login-helper UI
