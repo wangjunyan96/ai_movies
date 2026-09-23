@@ -53,7 +53,7 @@ const CONFIG = {
     // 横屏页面
     AGREEMENT_CHECKBOX: { x: 81, y: 679 },
     QQ_LOGIN: { x: 846, y: 597 },
-    FRIEND_BTN: { x: 52, y: 599 },
+    FRIEND_BTN: { x: 56, y: 590 },
     LEFT_SECOND_BTN: { x: 58, y: 258 },
     REUNION_INPUT: { x: 639, y: 386 },
     REUNION_CONFIRM: { x: 635, y: 536 },
