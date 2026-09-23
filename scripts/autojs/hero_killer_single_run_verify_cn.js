@@ -57,6 +57,7 @@ const CONFIG = {
     LEFT_SECOND_BTN: { x: 58, y: 258 },
     REUNION_INPUT: { x: 639, y: 386 },
     REUNION_CONFIRM: { x: 635, y: 536 },
+    PAGE_BACK: { x: 64, y: 35 },
     PROFILE_BTN: { x: 58, y: 35 },
     SWITCH_ACCOUNT_BTN: { x: 218, y: 486 },
     ACCEPT_INVITE: { x: 1044, y: 147 },
@@ -592,9 +593,11 @@ function step11CloseRetryPopup() {
 // Step 12
 function step12SwitchAccountFromProfile() {
   log("Step12 个人中心切换账号");
-  back();
-  sleepShort();
-  back();
+  // 先点页面返回按钮（好友页 -> 大厅），失败时再用系统返回键兜底
+  const backClicked = tapByAbsolutePoint(CONFIG.ABS_COORD.PAGE_BACK, "页面返回按钮");
+  if (!backClicked) {
+    back();
+  }
   sleep(1800);
 
   if (!tapWithFallbackEx(
