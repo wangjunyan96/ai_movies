@@ -52,6 +52,7 @@ const CONFIG = {
     FRIEND_BTN: { x: 56, y: 599 },
     PROFILE_BTN: { x: 58, y: 35 },
     SWITCH_ACCOUNT_BTN: { x: 218, y: 486 },
+    ACCEPT_INVITE: { x: 1044, y: 147 },
     POPUP_CLOSE: { x: 1081, y: 147 },
 
     // 竖屏上号器页面
@@ -444,6 +445,12 @@ function step09TapLeftSecondButton() {
     7000
   )) {
     throw new Error("未找到左侧第二个目标按钮。");
+  }
+  // 若点击广结好友后没出弹窗，则补点「接受邀请」
+  if (!waitByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 1500)) {
+    log("Step9 未检测到重逢弹窗，尝试点击【接受邀请】");
+    tapByAbsolutePoint(CONFIG.ABS_COORD.ACCEPT_INVITE, "接受邀请");
+    sleep(1500);
   }
 }
 
