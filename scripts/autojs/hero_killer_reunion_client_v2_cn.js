@@ -720,6 +720,15 @@ function step07WaitLobby() {
 // Step 8: 点击左下角好友
 function step08OpenFriendPage() {
   log("Step8 打开好友页");
+  if (CONFIG.COORD_ONLY_MODE) {
+    // 自绘层场景下，固定点两次提升命中率
+    tapByAbsolutePoint(CONFIG.ABS_COORD.FRIEND_BTN, "好友按钮-abs-1");
+    sleep(800);
+    tapByAbsolutePoint(CONFIG.ABS_COORD.FRIEND_BTN, "好友按钮-abs-2");
+    sleep(2200);
+    return;
+  }
+
   if (!tapWithFallbackEx(
     CONFIG.SELECTORS.FRIEND_BTN,
     CONFIG.ABS_COORD.FRIEND_BTN,
@@ -735,6 +744,21 @@ function step08OpenFriendPage() {
 // Step 9: 点击左侧第二个按钮
 function step09TapLeftSecondButton() {
   log("Step9 点击左侧第二个按钮");
+  if (CONFIG.COORD_ONLY_MODE) {
+    // 坐标模式：直接点左侧第二按钮，避免误命中文本节点
+    tapByAbsolutePoint(CONFIG.ABS_COORD.LEFT_SECOND_BTN, "左侧第二按钮-abs-1");
+    sleep(700);
+    tapByAbsolutePoint(CONFIG.ABS_COORD.LEFT_SECOND_BTN, "左侧第二按钮-abs-2");
+    sleep(1200);
+    // 若点击广结好友后没出弹窗，则补点「接受邀请」
+    if (!waitByRegex(CONFIG.SELECTORS.REUNION_CONFIRM_BTN, 1500)) {
+      log("Step9 未检测到重逢弹窗，尝试点击【接受邀请】");
+      tapByAbsolutePoint(CONFIG.ABS_COORD.ACCEPT_INVITE, "接受邀请");
+      sleep(1500);
+    }
+    return;
+  }
+
   if (!tapWithFallbackEx(
     CONFIG.SELECTORS.LEFT_SECOND_BTN_TEXT,
     CONFIG.ABS_COORD.LEFT_SECOND_BTN,
