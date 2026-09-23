@@ -100,6 +100,21 @@ const CONFIG = {
     SWITCH_ACCOUNT_BTN: { x: 0.18, y: 0.68 }
   },
 
+  // 你提供的绝对坐标（像素），脚本会优先使用
+  ABS_COORD: {
+    // 横屏页面
+    AGREEMENT_CHECKBOX: { x: 81, y: 679 },
+    QQ_LOGIN: { x: 846, y: 597 },
+    FRIEND_BTN: { x: 56, y: 599 },
+    PROFILE_BTN: { x: 58, y: 35 },
+    SWITCH_ACCOUNT_BTN: { x: 218, y: 486 },
+    POPUP_CLOSE: { x: 1081, y: 147 },
+
+    // 竖屏上号器页面
+    LOGIN_HELPER_ACCOUNT_INPUT: { x: 385, y: 503 },
+    LOGIN_HELPER_OP_BTN: { x: 380, y: 1034 }
+  },
+
   /**
    * 选择器配置（最关键）
    * 建议先用 Auto.js 布局分析确认真实文案，再逐项替换。
@@ -244,6 +259,19 @@ function tapByRatioPoint(point, tag) {
 }
 
 /**
+ * 按绝对像素坐标点击（适合自绘层页面）。
+ */
+function tapByAbsolutePoint(point, tag) {
+  if (!point) return false;
+  const ok = click(point.x, point.y);
+  if (ok) {
+    log("绝对坐标点击[" + (tag || "unknown") + "] -> (" + point.x + "," + point.y + ")");
+    sleepShort();
+  }
+  return ok;
+}
+
+/**
  * 通过 text 正则点击。
  */
 function tapByTextRegex(regex, timeoutMs) {
@@ -279,6 +307,16 @@ function tapWithFallback(regex, point, tag, timeoutMs) {
   const ok = tapByRegex(regex, timeoutMs);
   if (ok) return true;
   return tapByRatioPoint(point, tag);
+}
+
+/**
+ * 先文案识别，再绝对坐标，最后比例坐标。
+ */
+function tapWithFallbackEx(regex, absPoint, ratioPoint, tag, timeoutMs) {
+  const ok = tapByRegex(regex, timeoutMs);
+  if (ok) return true;
+  if (tapByAbsolutePoint(absPoint, tag + "-abs")) return true;
+  return tapByRatioPoint(ratioPoint, tag + "-ratio");
 }
 
 /**
@@ -357,6 +395,26 @@ function setInputTextByPoint(point, value, tag) {
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * 绝对坐标输入兜底。
+ */
+function setInputTextByPointAbs(point, value, tag) {
+  if (!tapByAbsolutePoint(point, tag)) return false;
+  sleepShort(300);
+  try {
+    setText(value);
+    sleepShort(500);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function setInputTextBySmartPoint(absPoint, ratioPoint, value, tag) {
+  if (setInputTextByPointAbs(absPoint, value, tag + "-abs")) return true;
+  return setInputTextByPoint(ratioPoint, value, tag + "-ratio");
 }
 
 /**
@@ -514,8 +572,9 @@ function step02EnsureLoginPage() {
 // Step 3: 勾选协议（若出现）
 function step03AgreeProtocol() {
   log("Step3 勾选协议");
-  tapWithFallback(
+  tapWithFallbackEx(
     CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
+    CONFIG.ABS_COORD.AGREEMENT_CHECKBOX,
     CONFIG.COORD_FALLBACK.AGREEMENT_CHECKBOX,
     "协议勾选",
     3000
@@ -525,8 +584,9 @@ function step03AgreeProtocol() {
 // Step 4: 选择 QQ 登录
 function step04TapQqLogin() {
   log("Step4 点击 QQ 登录");
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.QQ_LOGIN_BTN,
+    CONFIG.ABS_COORD.QQ_LOGIN,
     CONFIG.COORD_FALLBACK.QQ_LOGIN,
     "QQ登录",
     6000
@@ -551,12 +611,18 @@ function step06InputAccountAndSubmit(account) {
     if (!setInputText(accountInput, account)) throw new Error("账号填写失败。");
   } else {
     // 账号输入框识别失败时，尝试用账号输入区坐标兜底
-    if (!setInputTextByPoint(CONFIG.COORD_FALLBACK.LOGIN_HELPER_ACCOUNT_INPUT, account, "账号输入框兜底")) {
+    if (!setInputTextBySmartPoint(
+      CONFIG.ABS_COORD.LOGIN_HELPER_ACCOUNT_INPUT,
+      CONFIG.COORD_FALLBACK.LOGIN_HELPER_ACCOUNT_INPUT,
+      account,
+      "账号输入框兜底"
+    )) {
       throw new Error("未找到账号输入框，且坐标兜底输入失败。");
     }
   }
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN,
+    CONFIG.ABS_COORD.LOGIN_HELPER_OP_BTN,
     CONFIG.COORD_FALLBACK.LOGIN_HELPER_OP_BTN,
     "输入OP数据点我授权",
     8000
@@ -577,8 +643,9 @@ function step07WaitLobby() {
 // Step 8: 点击左下角好友
 function step08OpenFriendPage() {
   log("Step8 打开好友页");
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.FRIEND_BTN,
+    CONFIG.ABS_COORD.FRIEND_BTN,
     CONFIG.COORD_FALLBACK.FRIEND_BTN,
     "好友按钮",
     8000
@@ -625,7 +692,9 @@ function step10InputReunionCodeAndConfirm(reunionCode) {
 // Step 11: 关闭重试弹窗
 function step11CloseRetryPopup() {
   log("Step11 关闭重试弹窗（若出现）");
-  tapByRegex(CONFIG.SELECTORS.RETRY_POPUP_CLOSE, 2500);
+  if (!tapByRegex(CONFIG.SELECTORS.RETRY_POPUP_CLOSE, 2500)) {
+    tapByAbsolutePoint(CONFIG.ABS_COORD.POPUP_CLOSE, "弹窗关闭按钮");
+  }
   sleepShort(800);
 }
 
@@ -637,8 +706,9 @@ function step12SwitchAccountFromProfile() {
   back();
   sleep(1800);
 
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.PROFILE_BTN,
+    CONFIG.ABS_COORD.PROFILE_BTN,
     CONFIG.COORD_FALLBACK.PROFILE_BTN,
     "个人中心",
     7000
@@ -646,8 +716,9 @@ function step12SwitchAccountFromProfile() {
     throw new Error("未找到个人中心入口。");
   }
   sleep(2000);
-  if (!tapWithFallback(
+  if (!tapWithFallbackEx(
     CONFIG.SELECTORS.SWITCH_ACCOUNT_BTN,
+    CONFIG.ABS_COORD.SWITCH_ACCOUNT_BTN,
     CONFIG.COORD_FALLBACK.SWITCH_ACCOUNT_BTN,
     "切换账号",
     7000
