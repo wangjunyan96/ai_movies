@@ -283,30 +283,30 @@ function step02EnsureLoginPage() {
 }
 
 // Step 3
-function step03TapQqLogin() {
+function step03AgreeProtocol() {
   if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
-    log("Step3 跳过：当前已在大厅，无需点QQ登录。");
+    log("Step3 跳过：当前已在大厅，无需勾选协议。");
     return;
   }
-  log("Step3 点击QQ登录");
-  if (!tapWithFallback(CONFIG.SELECTORS.QQ_LOGIN_BTN, CONFIG.COORD_FALLBACK.QQ_LOGIN, "QQ登录", 6000)) {
-    throw new Error("未找到QQ登录按钮。");
-  }
-}
-
-// Step 4
-function step04AgreeProtocol() {
-  if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
-    log("Step4 跳过：当前已在大厅，无需勾选协议。");
-    return;
-  }
-  log("Step4 勾选协议");
+  log("Step3 勾选协议");
   tapWithFallback(
     CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
     CONFIG.COORD_FALLBACK.AGREEMENT_CHECKBOX,
     "协议勾选",
     3000
   );
+}
+
+// Step 4
+function step04TapQqLogin() {
+  if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
+    log("Step4 跳过：当前已在大厅，无需点QQ登录。");
+    return;
+  }
+  log("Step4 点击QQ登录");
+  if (!tapWithFallback(CONFIG.SELECTORS.QQ_LOGIN_BTN, CONFIG.COORD_FALLBACK.QQ_LOGIN, "QQ登录", 6000)) {
+    throw new Error("未找到QQ登录按钮。");
+  }
 }
 
 // Step 5
@@ -441,8 +441,8 @@ function step13EnsureBackToLoginPage() {
 function runOnce() {
   step01LaunchGame();
   step02EnsureLoginPage();
-  step03TapQqLogin();
-  step04AgreeProtocol();
+  step03AgreeProtocol();
+  step04TapQqLogin();
   step05WaitLoginHelper();
   step06InputAccountAndSubmit();
   step07WaitLobby();

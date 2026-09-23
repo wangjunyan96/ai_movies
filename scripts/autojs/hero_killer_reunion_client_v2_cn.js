@@ -8,8 +8,8 @@
  * 你给出的业务流程（13 步）：
  * 1. 打开游戏
  * 2. 进入登录页面
- * 3. 选择 QQ 登录
- * 4. 勾选协议
+ * 3. 勾选协议
+ * 4. 选择 QQ 登录
  * 5. 自动拉起登号器
  * 6. 填写账号，点击 op 按钮
  * 7. 进入游戏大厅
@@ -108,10 +108,10 @@ const CONFIG = {
     // 登录页锚点（只要出现其一就视为在登录页）
     LOGIN_PAGE: /(QQ登录|微信登录|游客登录|快速登录)/,
 
-    // Step 3: QQ 登录按钮
+    // Step 4: QQ 登录按钮
     QQ_LOGIN_BTN: /(QQ登录)/,
 
-    // Step 4: 协议勾选（可选）
+    // Step 3: 协议勾选（可选）
     AGREEMENT_CHECKBOX: /(同意|已阅读|用户协议|隐私政策|我已经详细阅读并同意)/,
 
     // Step 5/6: 登号器账号输入提示
@@ -511,9 +511,20 @@ function step02EnsureLoginPage() {
   }
 }
 
-// Step 3: 选择 QQ 登录
-function step03TapQqLogin() {
-  log("Step3 点击 QQ 登录");
+// Step 3: 勾选协议（若出现）
+function step03AgreeProtocol() {
+  log("Step3 勾选协议");
+  tapWithFallback(
+    CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
+    CONFIG.COORD_FALLBACK.AGREEMENT_CHECKBOX,
+    "协议勾选",
+    3000
+  );
+}
+
+// Step 4: 选择 QQ 登录
+function step04TapQqLogin() {
+  log("Step4 点击 QQ 登录");
   if (!tapWithFallback(
     CONFIG.SELECTORS.QQ_LOGIN_BTN,
     CONFIG.COORD_FALLBACK.QQ_LOGIN,
@@ -522,17 +533,6 @@ function step03TapQqLogin() {
   )) {
     throw new Error("未找到 QQ 登录按钮。");
   }
-}
-
-// Step 4: 勾选协议（若出现）
-function step04AgreeProtocol() {
-  log("Step4 勾选协议");
-  tapWithFallback(
-    CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
-    CONFIG.COORD_FALLBACK.AGREEMENT_CHECKBOX,
-    "协议勾选",
-    3000
-  );
 }
 
 // Step 5: 自动拉起登号器
@@ -674,8 +674,8 @@ function runFlowForTask(task) {
 
   step01LaunchGame();
   step02EnsureLoginPage();
-  step03TapQqLogin();
-  step04AgreeProtocol();
+  step03AgreeProtocol();
+  step04TapQqLogin();
   step05WaitLoginHelper();
   step06InputAccountAndSubmit(account);
   step07WaitLobby();
