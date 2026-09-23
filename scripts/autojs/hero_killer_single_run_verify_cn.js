@@ -23,6 +23,8 @@ const CONFIG = {
   LOGIN_HELPER_PACKAGE: "",
 
   ACTION_TIMEOUT_MS: 15000,
+  // 启动后“登录页/大厅”识别窗口，放宽到 45 秒避免慢启动误判
+  ENTRY_DETECT_TIMEOUT_MS: 45000,
   PAGE_WAIT_MS: 1200,
 
   // 坐标兜底（比例值 0~1）
@@ -56,6 +58,11 @@ const CONFIG = {
     SWITCH_ACCOUNT_BTN: /(切换账号|退出登录|注销|切换帐号)/,
     BACK_TO_LOGIN_MARK: /(QQ登录|微信登录|游客登录|快速登录|二维码登录)/
   }
+};
+
+// 流程状态记录（用于“已在大厅则跳过登录步骤”）
+const FLOW_STATE = {
+  entryState: "unknown" // login | lobby | unknown
 };
 
 auto.waitFor();
@@ -121,6 +128,34 @@ function waitByRegex(regex, timeoutMs) {
   const timeout = timeoutMs || CONFIG.ACTION_TIMEOUT_MS;
   if (textMatches(regex).findOne(timeout)) return true;
   return !!descMatches(regex).findOne(300);
+}
+
+function existsByRegex(regex) {
+  return textMatches(regex).exists() || descMatches(regex).exists();
+}
+
+function isLoginPageNow() {
+  return existsByRegex(CONFIG.SELECTORS.LOGIN_PAGE);
+}
+
+function isLobbyNow() {
+  return existsByRegex(CONFIG.SELECTORS.LOBBY_MARK);
+}
+
+/**
+ * 启动后页面探测：
+ * - login: 明确看到登录页锚点
+ * - lobby: 明确看到大厅锚点（可能自动登录）
+ * - unknown: 两者都识别不到（游戏自绘层常见）
+ */
+function detectEntryState(timeoutMs) {
+  const deadline = new Date().getTime() + timeoutMs;
+  while (new Date().getTime() < deadline) {
+    if (isLobbyNow()) return "lobby";
+    if (isLoginPageNow()) return "login";
+    sleep(700);
+  }
+  return "unknown";
 }
 
 function closeCommonPopups(rounds) {
@@ -225,14 +260,28 @@ function step01LaunchGame() {
 
 // Step 2
 function step02EnsureLoginPage() {
-  log("Step2 进入登录页");
-  if (!waitByRegex(CONFIG.SELECTORS.LOGIN_PAGE, 15000)) {
-    throw new Error("未进入登录页面。");
+  log("Step2 识别入口状态（登录页/大厅）");
+  const state = detectEntryState(CONFIG.ENTRY_DETECT_TIMEOUT_MS);
+  FLOW_STATE.entryState = state;
+
+  if (state === "lobby") {
+    log("已检测到大厅，判定为自动登录，后续跳过登录与登号器步骤。");
+    return;
   }
+  if (state === "login") {
+    log("已检测到登录页。");
+    return;
+  }
+  // unknown 不再直接失败，继续执行坐标兜底链路
+  log("未识别到登录页/大厅锚点，继续执行（将依赖坐标兜底）。");
 }
 
 // Step 3
 function step03TapQqLogin() {
+  if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
+    log("Step3 跳过：当前已在大厅，无需点QQ登录。");
+    return;
+  }
   log("Step3 点击QQ登录");
   if (!tapWithFallback(CONFIG.SELECTORS.QQ_LOGIN_BTN, CONFIG.COORD_FALLBACK.QQ_LOGIN, "QQ登录", 6000)) {
     throw new Error("未找到QQ登录按钮。");
@@ -241,6 +290,10 @@ function step03TapQqLogin() {
 
 // Step 4
 function step04AgreeProtocol() {
+  if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
+    log("Step4 跳过：当前已在大厅，无需勾选协议。");
+    return;
+  }
   log("Step4 勾选协议");
   tapWithFallback(
     CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
@@ -252,6 +305,10 @@ function step04AgreeProtocol() {
 
 // Step 5
 function step05WaitLoginHelper() {
+  if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
+    log("Step5 跳过：当前已在大厅，无需等待登号器。");
+    return;
+  }
   log("Step5 等待登号器");
   if (!waitLoginHelperReady()) {
     throw new Error("登号器未拉起或不可识别。");
@@ -260,6 +317,10 @@ function step05WaitLoginHelper() {
 
 // Step 6
 function step06InputAccountAndSubmit() {
+  if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
+    log("Step6 跳过：当前已在大厅，无需填写账号。");
+    return;
+  }
   log("Step6 填账号并提交");
   const accountInput = findInputByHintRegex(CONFIG.SELECTORS.LOGIN_HELPER_ACCOUNT_HINT, 10000);
   if (accountInput) {
@@ -282,9 +343,11 @@ function step06InputAccountAndSubmit() {
 // Step 7
 function step07WaitLobby() {
   log("Step7 等待进入大厅");
-  if (!waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 25000)) {
-    throw new Error("登录后未进入大厅。");
+  if (waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 25000)) {
+    return;
   }
+  // 大厅也可能是自绘层无法抓 text/desc，这里放宽，交给后续步骤验证。
+  log("未识别到大厅锚点，继续尝试后续步骤（坐标兜底）。");
 }
 
 // Step 8
