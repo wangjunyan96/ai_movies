@@ -38,7 +38,7 @@ public final class CloudPhoneTaskServer {
 
     public static void main(String[] args) throws IOException {
         int port = parsePort(System.getenv("PORT"));
-        String taskFile = envOrDefault("TASK_FILE", DEFAULT_TASK_FILE);
+        String taskFile = envOrDefault(System.getenv("TASK_FILE"), DEFAULT_TASK_FILE);
         long leaseSeconds = parseLongOrDefault(System.getenv("LEASE_SECONDS"), DEFAULT_LEASE_SECONDS);
         String apiKey = System.getenv("API_KEY");
 
