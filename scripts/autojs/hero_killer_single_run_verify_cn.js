@@ -24,8 +24,12 @@ const CONFIG = {
   LOGIN_HELPER_PACKAGE: "",
 
   ACTION_TIMEOUT_MS: 15000,
+  // 坐标优先模式：true 时弱化页面文字识别，避免自绘层识别失败导致中断
+  COORD_ONLY_MODE: true,
   // 启动后“登录页/大厅”识别窗口，放宽到 45 秒避免慢启动误判
   ENTRY_DETECT_TIMEOUT_MS: 45000,
+  // 坐标模式下，登录后固定等待进入大厅时长
+  WAIT_AFTER_LOGIN_MS: 12000,
   PAGE_WAIT_MS: 1200,
 
   // 坐标兜底（比例值 0~1）
@@ -316,6 +320,13 @@ function step01LaunchGame() {
 
 // Step 2
 function step02EnsureLoginPage() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step2 坐标模式：跳过登录页识别，固定等待页面稳定。");
+    FLOW_STATE.entryState = "unknown";
+    sleep(5000);
+    return;
+  }
+
   log("Step2 识别入口状态（登录页/大厅）");
   const state = detectEntryState(CONFIG.ENTRY_DETECT_TIMEOUT_MS);
   FLOW_STATE.entryState = state;
@@ -334,6 +345,18 @@ function step02EnsureLoginPage() {
 
 // Step 3
 function step03AgreeProtocol() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step3 坐标模式：直接勾选协议。");
+    tapWithFallbackEx(
+      CONFIG.SELECTORS.AGREEMENT_CHECKBOX,
+      CONFIG.ABS_COORD.AGREEMENT_CHECKBOX,
+      CONFIG.COORD_FALLBACK.AGREEMENT_CHECKBOX,
+      "协议勾选",
+      1500
+    );
+    return;
+  }
+
   if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
     log("Step3 跳过：当前已在大厅，无需勾选协议。");
     return;
@@ -350,6 +373,20 @@ function step03AgreeProtocol() {
 
 // Step 4
 function step04TapQqLogin() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step4 坐标模式：直接点击QQ登录。");
+    if (!tapWithFallbackEx(
+      CONFIG.SELECTORS.QQ_LOGIN_BTN,
+      CONFIG.ABS_COORD.QQ_LOGIN,
+      CONFIG.COORD_FALLBACK.QQ_LOGIN,
+      "QQ登录",
+      1500
+    )) {
+      throw new Error("坐标模式下点击QQ登录失败。");
+    }
+    return;
+  }
+
   if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
     log("Step4 跳过：当前已在大厅，无需点QQ登录。");
     return;
@@ -368,6 +405,12 @@ function step04TapQqLogin() {
 
 // Step 5
 function step05WaitLoginHelper() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step5 坐标模式：跳过登号器识别，固定等待。");
+    sleep(2500);
+    return;
+  }
+
   if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
     log("Step5 跳过：当前已在大厅，无需等待登号器。");
     return;
@@ -380,6 +423,29 @@ function step05WaitLoginHelper() {
 
 // Step 6
 function step06InputAccountAndSubmit() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step6 坐标模式：直接填token并点击授权。");
+    if (!setInputTextBySmartPoint(
+      CONFIG.ABS_COORD.LOGIN_HELPER_TOKEN_INPUT,
+      CONFIG.COORD_FALLBACK.LOGIN_HELPER_TOKEN_INPUT,
+      CONFIG.LOGIN_TOKEN,
+      "token输入"
+    )) {
+      throw new Error("坐标模式下 token 输入失败。");
+    }
+    if (!tapWithFallbackEx(
+      CONFIG.SELECTORS.LOGIN_HELPER_OP_BTN,
+      CONFIG.ABS_COORD.LOGIN_HELPER_OP_AUTH_BTN,
+      CONFIG.COORD_FALLBACK.LOGIN_HELPER_OP_AUTH_BTN,
+      "输入OP数据点我授权",
+      1500
+    )) {
+      throw new Error("坐标模式下未点到OP授权按钮。");
+    }
+    sleep(6000);
+    return;
+  }
+
   if (FLOW_STATE.entryState === "lobby" || isLobbyNow()) {
     log("Step6 跳过：当前已在大厅，无需填写账号。");
     return;
@@ -412,6 +478,12 @@ function step06InputAccountAndSubmit() {
 
 // Step 7
 function step07WaitLobby() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step7 坐标模式：固定等待进入大厅。");
+    sleep(CONFIG.WAIT_AFTER_LOGIN_MS);
+    return;
+  }
+
   log("Step7 等待进入大厅");
   if (waitByRegex(CONFIG.SELECTORS.LOBBY_MARK, 25000)) {
     return;
@@ -516,6 +588,12 @@ function step12SwitchAccountFromProfile() {
 
 // Step 13
 function step13EnsureBackToLoginPage() {
+  if (CONFIG.COORD_ONLY_MODE) {
+    log("Step13 坐标模式：跳过登录页文本校验，等待页面切换完成。");
+    sleep(3000);
+    return;
+  }
+
   log("Step13 校验回到登录页");
   if (!waitByRegex(CONFIG.SELECTORS.BACK_TO_LOGIN_MARK, 15000)) {
     throw new Error("切换账号后未回到登录页。");
